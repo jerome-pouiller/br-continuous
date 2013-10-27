@@ -75,6 +75,7 @@ $(document).ready(function() {
             text-decoration: none;
             color: rgb(90, 90, 90);
         }
+        .sha1     { font-family: monospace; }
         table     { margin-left: auto; margin-right: auto; text-align: left; }
         thead     { vertical-align: middle; text-align: center; }
         table.dataTable tr.odd, tr:nth-child(odd)   { background-color:#eee; }
@@ -116,6 +117,7 @@ my $html_header_pkg = <<'EOF';
             text-decoration: none;
             color: rgb(90, 90, 90);
         }
+        .sha1     { font-family: monospace; }
         table     { margin-left: auto; margin-right: auto; text-align: left; width: 50em; }
         thead     { vertical-align: middle; text-align: center; }
         tr:nth-child(odd)   { background-color:#eee; }
@@ -332,21 +334,33 @@ sub updateTargetsAndDeps($$) {
 
 sub updateInhibit($) {
     my $cfgs = $_[0];
+    my $ret = 0;
     for my $c (values %{$cfgs}) {
-        $c->{inhibit} = (-e "cfgs/$c->{name}/inhibit") ? 1 : 0;
+        my $newvalue = (-e "cfgs/$c->{name}/inhibit") ? 1 : 0;
+        if (!defined $c->{inhibit} || $c->{inhibit} != $newvalue) {
+            $c->{inhibit} = $newvalue;
+            $ret = 1;
+        }
     }
+    return $ret;
 }
 
 sub updateForce($) {
     my $pkgs = $_[0];
+    my $ret = 0;
     for my $p (values %{$pkgs}) {
         for my $j (values %{$p->{cfgs}}) {
             my $dir = "context/$j->{cfg}{name}/$j->{pkg}{name}";
             if (-e $dir && defined $j->{last_build}) {
-                $j->{last_build}{forcerebuilt} = ((-e "$dir/force-rebuild") ? 1 : 0);
+                my $newvalue = (-e "$dir/force-rebuild") ? 1 : 0;
+                if ($j->{last_build}{forcerebuilt} != $newvalue) {
+                    $j->{last_build}{forcerebuilt} = $newvalue;
+                    $ret =1;
+                }
             }
         }
     }
+    return $ret;
 }
 
 sub updateStatus($) {
@@ -384,8 +398,8 @@ sub getJobs($) {
         return 0;
     }
     sub sortJobs {
-        my $prioa = computePriority $a;
-        my $priob = computePriority $b;
+        my $prioa = $a->{priority};
+        my $priob = $b->{priority};
         return $priob <=> $prioa if ($priob != $prioa);
         # Try to build package without deps in first.
         # TODO: Make a real topologic sort
@@ -414,6 +428,7 @@ sub getJobs($) {
     for my $p (values %pkgs) {
         for my $c (values $p->{cfgs}) {
             if (!$c->{inhibit}) {
+                $c->{priority} = computePriority $c;
                 push @jobs, $c;
             }
         }
@@ -481,7 +496,7 @@ sub dumpResults($$) {
     my $FILE;
     open $FILE, '>', "html/index.html" || die "html/index.html: $!";
     print $FILE $html_header;
-    print $FILE "<tr><th>Configuration</th><th>" . (join "</th><th>", sort keys %cfgs) . "</th></tr>\n";
+    print $FILE "<thead><tr><th>Configuration</th><th>" . (join "</th><th>", sort keys %cfgs) . "</th></tr></thead>\n";
    
     for my $p (sort keys %pkgs) {
         print $FILE "<tr><th><a href='$p.html'>$p</a></th>";
@@ -512,9 +527,10 @@ EOF
 }
 
 
-sub dumpJobQueue($) {
+sub dumpJobQueue($$) {
     my @jobs = @{$_[0]};
-    
+    my $current_idx = $_[1];
+
     my $FILE;
     open $FILE, '>', "html/jobqueue.html" || die "jobqueue.html: $!";
     print $FILE $html_header;
@@ -522,7 +538,11 @@ sub dumpJobQueue($) {
     my $idx = 0;
     for my $r (@jobs) {
         print $FILE "<tr>";
-        print $FILE "<td>$idx</td>";
+        if ($idx == $current_idx) {
+            print $FILE "<td><bold>&lt; $idx &gt;</bold></td>";
+        } else {
+            print $FILE "<td>$idx</td>";
+        }
         print $FILE "<td><a href='$r->{pkg}{name}.html'>$r->{pkg}{name}</td>";
         print $FILE "<td>$r->{cfg}{name}</td>";
         my $dir = "../context/$r->{cfg}{name}/$r->{pkg}{name}";
@@ -592,7 +612,7 @@ sub buildPkg($$$) {
         my $reason = (grep /^\[7m>>> .*\[27m$/, <$FILE>)[-1];
         $reason =~  /^\[7m>>> ([^ ]*) ([^ ]*) (.*)\[27m/;
         close $FILE;
-        #print "Build of $pkg failed because of  $1 while $3\n";
+        print "Build of $pkg failed because of $1 while $3\n";
         if ($1 ne $pkg) {
             writeLine "$out/details", "$1";
             writeLine "$out/result", "Dep";
@@ -600,18 +620,21 @@ sub buildPkg($$$) {
             writeLine "$out/result", "KO";
         }
     } elsif ($ret == 2) {
+        print "Build of $pkg interrupted\n";
         writeLine "$out/result", "Interrupted";
     } elsif ($ret) {
+        print "Build of $pkg had a strange end\n";
         writeLine "$out/result", "BUG";
     } else {
+        print "Build of $pkg success\n";
         writeLine "$out/result", "OK";
     }
     return $?;
 }
 
-sub build($$) {
+sub build($$$) {
     my $CMD;
-    my ($j, $jobs) = @_; 
+    my ($j, $jobs, $jobidx) = @_; 
     my $cname = $j->{cfg}{name};
     my $pname = $j->{pkg}{name};
     my $new_id = qx(uuidgen | cut -f 1 -d '-');
@@ -632,8 +655,8 @@ sub build($$) {
         
     writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-')  if (! -e "cfgs/$cname/dirid");
 
-    if ($j->{last_build} && $j->{last_build}{outdirid} && $j->{last_build}{outdirid} eq firstLine "cfgs/$cname/dirid") {
-        print "run: $MAKE O=../cfgs/$cname clean";
+    if ($j->{priority} == 0 && $j->{last_build} && $j->{last_build}{outdirid} && $j->{last_build}{outdirid} eq firstLine "cfgs/$cname/dirid") {
+        print "run: $MAKE O=../cfgs/$cname clean\n";
         system "$MAKE O=../cfgs/$cname clean";
         writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-');
     }
@@ -654,7 +677,7 @@ sub build($$) {
     writeLine "$outdir/gitid", $j->{last_build}{gitid};
     writeLine "$outdir/duration", $j->{last_build}{duration};
     dumpPkg $j->{pkg};
-    dumpJobQueue($jobs);
+    dumpJobQueue($jobs, $jobidx);
 
     my $exit_status;
     if (-x "cfgs/$cname/buildPkg") {
@@ -668,7 +691,7 @@ sub build($$) {
     $j->{last_build}{details}  = firstLine "$outdir/details" if (-e "$outdir/details");
 
     dumpPkg $j->{pkg};
-    dumpJobQueue($jobs);
+    dumpJobQueue($jobs, $jobidx);
 }
 
 my $lastchecktime = time;
@@ -676,6 +699,8 @@ my $redumpkgs = 0;
 my $rebuilddb = 1;
 my $pkgs;
 my $cfgs;
+my $jobidx = 0;
+my $jobs;
 
 print ((strftime "%T", localtime(time)) . " Get config list\n");
 $cfgs = getCfgList;
@@ -689,6 +714,7 @@ while (1) {
     my $changes = qx(cd buildroot && git pull --rebase 2>&1);
     if ($changes !~ /^Current branch .* is up to date.$/ || $rebuilddb) {
         $rebuilddb = 1;
+        print $changes;
         print ((strftime "%T", localtime(time)) . " Get package list\n");
         $pkgs = getPkgList;
         print ((strftime "%T", localtime(time)) . " Update configurations\n");
@@ -724,16 +750,22 @@ while (1) {
     }
 
     print ((strftime "%T", localtime(time)) . " Update forced packages\n");
-    updateForce $pkgs;
+    $rebuilddb += updateForce $pkgs;
     print ((strftime "%T", localtime(time)) . " Update inhibit configs\n");
-    updateInhibit $cfgs; # TODO: also check new configurations
-    print ((strftime "%T", localtime(time)) . " Compute job list\n");
-    my $jobs = getJobs $pkgs;
+    $rebuilddb += updateInhibit $cfgs; # TODO: also check new configurations
+
+    if ($rebuilddb) {
+        print ((strftime "%T", localtime(time)) . " Compute job list\n");
+        $jobs = getJobs $pkgs;
+        $jobidx = 0;
+    } else {
+        $jobidx++;
+    }
     print ((strftime "%T", localtime(time)) . " Dump job list\n");
-    dumpJobQueue($jobs);
-    print ((strftime "%T", localtime(time)) . " Build $jobs->[0]{cfg}{name}/$jobs->[0]{pkg}{name}\n");
-    build $jobs->[0], $jobs;
+    dumpJobQueue($jobs, $jobidx);
+    print ((strftime "%T", localtime(time)) . " Build $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}\n");
+    build $jobs->[$jobidx], $jobs, $jobidx;
     print ((strftime "%T", localtime(time)) . " Rebuild result for $jobs->[0]{pkg}{name}\n");
-    dumpPkg $jobs->[0]{pkg};
+    dumpPkg $jobs->[$jobidx]{pkg};
     $rebuilddb = 0;
 }
