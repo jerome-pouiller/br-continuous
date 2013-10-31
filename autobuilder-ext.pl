@@ -96,7 +96,6 @@ $(document).ready(function() {
   </head>
   <body>
     <h1>Buildroot - Continuous integration results</h1>
-    <p><table id='data'>
 EOF
 
 my $html_header_pkg = <<'EOF';
@@ -496,6 +495,7 @@ sub dumpResults($$) {
     my $FILE;
     open $FILE, '>', "html/index.html" || die "html/index.html: $!";
     print $FILE $html_header;
+    print $FILE "<p><table id='data'>\n";
     print $FILE "<thead><tr><th>Configuration</th><th>" . (join "</th><th>", sort keys %cfgs) . "</th></tr></thead>\n";
    
     for my $p (sort keys %pkgs) {
@@ -534,6 +534,7 @@ sub dumpJobQueue($$) {
     my $FILE;
     open $FILE, '>', "html/jobqueue.html" || die "jobqueue.html: $!";
     print $FILE $html_header;
+    print $FILE "<p><table>\n";
     print $FILE "<thead><tr><th>Place</th><th>Package</th><th>Config</th><th>Status</th><th>Buildreason</th><th>Date</th><th>Git id</th><th>Build duration</th></tr></thead>\n";
     my $idx = 0;
     for my $r (@jobs) {
