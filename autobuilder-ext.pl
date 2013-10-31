@@ -139,7 +139,7 @@ sub firstLine {
     open ($FILE, '<', $_[0]) || die "$_[0]: $!";
     my $line = <$FILE>;
     close $FILE;
-    chomp $line;
+    chomp $line || print "Cannot chomp $line";
     return $line
 }
 
@@ -147,7 +147,7 @@ sub firstLine {
 sub writeLine {
     my $FILE;
     open ($FILE, '>', $_[0]) || die "$_[0]: $!";
-    print { $FILE } $_[1];
+    print { $FILE } $_[1] . "\n";
     close $FILE;
 }
 
