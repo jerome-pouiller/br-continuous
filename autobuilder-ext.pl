@@ -36,6 +36,7 @@ use POSIX qw(strftime);
 use MIME::Lite;
 my $report = "";
 my $reporttime = time;
+$ENV{LANG} = "C";
 
 # FIXME: Use Perl Template Toolkit
 my $html_header = <<'EOF';
