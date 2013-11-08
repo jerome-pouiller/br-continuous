@@ -135,6 +135,7 @@ sub mtime($) {
 
 # Return first line of one file
 sub firstLine {
+    return undef if (! -e $_[0]);
     my $FILE;
     open ($FILE, '<', $_[0]) || die "$_[0]: $!";
     my $line = <$FILE>;
@@ -355,7 +356,7 @@ sub updateForce($) {
                 my $newvalue = (-e "$dir/force-rebuild") ? 1 : 0;
                 if ($j->{last_build}{forcerebuilt} != $newvalue) {
                     $j->{last_build}{forcerebuilt} = $newvalue;
-                    $ret =1;
+                    $ret = 1;
                 }
             }
         }
