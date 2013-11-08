@@ -602,7 +602,7 @@ while (1) {
             print $changes;
         }
         print ((strftime "%T", localtime(time)) . " Update packets modification times (take 5min)\n");
-        #updateCTimes $pkgs;
+        updateCTimes $pkgs;
     }
     
     my $newtime = time;
