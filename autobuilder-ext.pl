@@ -157,7 +157,7 @@ sub updateTargetsAndDeps($$) {
     sub addPkgConfig($$) {
         my $cfg = $_[0];
         my $pkg = $_[1];
-        print "$pkg->{name} name is invalid" if (!$pkg->{name});
+        print "$pkg->{name} name is invalid\n" if (!$pkg->{name});
         push @{$cfg->{packages}}, $pkg;
         $pkg->{cfgs}{$cfg->{name}} = {
             pkg => $pkg,
@@ -402,6 +402,14 @@ sub dumpPkg($) {
     $tpl->process("package.html.in", { name => $pkg{name}, cfgs => $pkg{cfgs} }, "html/$pkg{name}.html") || die $tpl->error();
 }
 
+sub dumpCfgs($) {
+    my ($cfgs) = @_;
+
+    for my $c (values %{$cfgs}) {
+        $tpl->process("config.html.in", { cfg => $c }, "html/cfg-$c->{name}.html") || die $tpl->error();
+    }
+}
+
 sub dumpResults($$) {
     my ($cfgs, $pkgs) = @_;
 
@@ -427,7 +435,7 @@ sub dumpJobQueue($$) {
             $r->{html_result} .= "<td>$idx</td>";
         }
         $r->{html_result} .= "<td><a href='$r->{pkg}{name}.html'>$r->{pkg}{name}</td>";
-        $r->{html_result} .= "<td>$r->{cfg}{name}</td>";
+        $r->{html_result} .= "<td><a href='cfg-$r->{cfg}{name}.html'>$r->{cfg}{name}</a></td>";
         $r->{html_result} .= resultToHtml($r);
         
         if ($r->{forcerebuilt}) {
@@ -608,6 +616,8 @@ while (1) {
     if ($rebuilddb) {
         print ((strftime "%T", localtime(time)) . " Update build status (take 5min)\n");
         updateStatus $pkgs;    
+        print ((strftime "%T", localtime(time)) . " Update configs pages\n");
+        dumpCfgs $cfgs;
     }
     
     print ((strftime "%T", localtime(time)) . " Dump global status\n");

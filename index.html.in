@@ -65,7 +65,7 @@ $(document).ready(function() {
     <h1>Buildroot - Continuous integration results</h1>
     <p><table id='data'>
       <thead>
-        <tr><th>Configuration</th>[% FOREACH c IN cfgs %]<th>[% c.key %]</th>[% END %]</tr>
+        <tr><th>Configuration</th>[% FOREACH c IN cfgs %]<th><a href='cfg-[% c.key %].html'>[% c.key %]</a></th>[% END %]</tr>
       </thead><tbody>
 [% FOREACH p IN pkgs %]
         <tr><th><a href='[% p.key %].html'>[% p.key %]</a></th>
