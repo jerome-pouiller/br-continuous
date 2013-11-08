@@ -1,0 +1,76 @@
+<?xml version="1.0"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html>
+  <head>
+    <title>Buildroot - Autobuilder</title>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+    <meta name="robots" content="noindex">
+    <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.css">
+    <script type="text/javascript" language="javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
+    <script type="text/javascript" language="javascript" src="js/FixedHeader.min.js"></script>
+    <script type="text/javascript" charset="utf-8">
+$(document).ready(function() {
+    var table = $('#data').dataTable({
+        "bPaginate": false,
+        "bLengthChange": false,
+        "bFilter": true,
+        "bSort":true,
+        "bInfo": false,
+        "bAutoWidth": true
+    } );
+    new FixedHeader(table);
+} );
+    </script>
+    <style type="text/css">
+        html      { text-align: center; } 
+        body      { font-family: sans-serif;  /*width: 50em; */ margin: auto;  }
+        h1        {
+            border-top: 1px solid rgb(208, 208, 208);
+            border-bottom: 1px solid rgb(208, 208, 208);
+            clear: both;
+        }
+        a         {
+            text-decoration: none;
+            color: rgb(90, 90, 90);
+        }
+        .blue     { background-color: LightSteelBlue !important; }
+        .green    { background-color: LightGreen !important; }
+        .red      { background-color: LightCoral !important; }
+        .orange   { background-color: SandyBrown !important; }
+        .small    { font-size: 50%; }
+        .sha1     { font-family: monospace; }
+        table     { margin-left: auto; margin-right: auto; text-align: left; }
+        thead     { vertical-align: middle; text-align: center; }
+        table.dataTable tr.odd, tr:nth-child(odd)   { background-color:#eee; }
+        table.dataTable tr.odd td.sorting_1  { background-color: #ddd; }
+        table.dataTable tr.odd td.sorting_2  { background-color: #ccc; }
+        table.dataTable tr.odd td.sorting_3  { background-color: #bbb; }
+        table.dataTable tr.even, tr:nth-child(even) { background-color:#fff; }
+        table.dataTable tr.even td.sorting_1 { background-color: #eee; }
+        table.dataTable tr.even td.sorting_2 { background-color: #ddd; }
+        table.dataTable tr.even td.sorting_3 { background-color: #ccc; }
+        table.dataTable thead th, table.dataTable td {
+            padding: 0px 1px;
+        }
+        table#data {
+            width: 50em;
+        }
+    </style>
+  </head>
+  <body>
+    [Home] <a href='jobqueue.html'>[JobQueue]</a>
+    <h1>Buildroot - Continuous integration results</h1>
+    <p><table id='data'>
+      <thead>
+        <tr><th>Configuration</th>[% FOREACH c IN cfgs %]<th>[% c.key %]</th>[% END %]</tr>
+      </thead><tbody>
+[% FOREACH p IN pkgs %]
+        <tr><th><a href='[% p.key %].html'>[% p.key %]</a></th>
+            [% p.value.html_result %]
+        </tr>
+[% END %]
+      </tbody>
+    </table></p>
+  </body>
+</html>

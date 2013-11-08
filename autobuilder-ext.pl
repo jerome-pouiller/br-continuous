@@ -37,98 +37,10 @@ use File::Basename;
 use POSIX qw(strftime);
 use Cwd qw(realpath);
 use MIME::Lite;
+use Template;
+my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
-$ENV{LANG} = "C";
-
-# FIXME: Use Perl Template Toolkit
-my $html_header = <<'EOF';
-<?xml version="1.0"?>
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
-<html>
-  <head>
-    <title>Buildroot - Autobuilder</title>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <meta name="robots" content="noindex">
-    <link rel="stylesheet" type="text/css" href="css/jquery.dataTables.css">
-    <script type="text/javascript" language="javascript" src="js/jquery.min.js"></script>
-    <script type="text/javascript" language="javascript" src="js/jquery.dataTables.min.js"></script>
-    <script type="text/javascript" language="javascript" src="js/FixedHeader.min.js"></script>
-    <script type="text/javascript" charset="utf-8">
-$(document).ready(function() {
-    var table = $('#data').dataTable({
-        "bPaginate": false,
-        "bLengthChange": false,
-        "bFilter": true,
-        "bSort":true,
-        "bInfo": false,
-        "bAutoWidth": true
-    } );
-    new FixedHeader(table);
-} );
-    </script>
-    <style type="text/css">
-        html      { text-align: center; } 
-        body      { font-family: sans-serif;  /*width: 50em; */ margin: auto;  }
-        h1        {
-            border-top: 1px solid rgb(208, 208, 208);
-            border-bottom: 1px solid rgb(208, 208, 208);
-            clear: both;
-        }
-        a         {
-            text-decoration: none;
-            color: rgb(90, 90, 90);
-        }
-        .sha1     { font-family: monospace; }
-        table     { margin-left: auto; margin-right: auto; text-align: left; }
-        thead     { vertical-align: middle; text-align: center; }
-        table.dataTable tr.odd, tr:nth-child(odd)   { background-color:#eee; }
-        table.dataTable tr.odd td.sorting_1  { background-color: #ddd; }
-        table.dataTable tr.odd td.sorting_2  { background-color: #ccc; }
-        table.dataTable tr.odd td.sorting_3  { background-color: #bbb; }
-        table.dataTable tr.even, tr:nth-child(even) { background-color:#fff; }
-        table.dataTable tr.even td.sorting_1 { background-color: #eee; }
-        table.dataTable tr.even td.sorting_2 { background-color: #ddd; }
-        table.dataTable tr.even td.sorting_3 { background-color: #ccc; }
-        table.dataTable thead th, table.dataTable td {
-            padding: 0px 1px;
-        }
-        table#data {
-            width: 50em;
-        }
-    </style>
-  </head>
-  <body>
-    <h1>Buildroot - Continuous integration results</h1>
-EOF
-
-my $html_header_pkg = <<'EOF';
-<html>
-  <head>
-    <title>Buildroot - Autobuilder package details</title>
-    <meta http-equiv="content-type" content="text/html; charset=utf-8" />
-    <meta name="robots" content="noindex">
-    <style type="text/css">
-        html      { text-align: center; } 
-        body      { font-family: sans-serif;  width: 50em; margin: auto; text-align: justify; }
-        h1        {
-            border-top: 1px solid rgb(208, 208, 208);
-            border-bottom: 1px solid rgb(208, 208, 208);
-            clear: both;
-        }
-        a         {
-            text-decoration: none;
-            color: rgb(90, 90, 90);
-        }
-        .sha1     { font-family: monospace; }
-        table     { margin-left: auto; margin-right: auto; text-align: left; width: 50em; }
-        thead     { vertical-align: middle; text-align: center; }
-        tr:nth-child(odd)   { background-color:#eee; }
-        tr:nth-child(even) { background-color:#fff; }
-    </style>
-  </head>
-  <body>
-EOF
 
 # Return modification time of one file
 sub mtime($) {
@@ -311,7 +223,7 @@ sub updateTargetsAndDeps($$) {
         addPkgConfig $cfg, $pkgs->{$pkg};
     }
     my @all_deps = getDepends($cfg, \@packages);
-   
+    
     for my $pkg (@packages) {
         my @pkg_deps = split / /, shift @all_deps;
         for my $dep (@pkg_deps) {
@@ -443,165 +355,112 @@ sub getJobs($) {
 }
 
 ############# HTML #############
+sub resultToHtml($) {
+    my $res = $_[0];
+
+    return "<td class='blue'>N/A</td>" if !(defined $res);
+    return "<td class='blue'>Wait</td>" if !(defined $res->{last_build});
+    my $dir = "../results/$res->{last_build}{id}";
+    my $result = $res->{last_build}{result};
+    return "<td class='green'><a href='$dir'>OK</a></td>" if ($result eq "OK" ||  $result eq "Ok");
+    return "<td class='red'><a href='$dir'>KO</a></td>"   if ($result eq "KO" ||  $result eq "Failed");
+    return "<td class='orange'><a href='$dir'>Dep</a><br/><a class='small' href='$res->{details}.html'>$res->{last_build}{details}</a></td>" if ($result eq "Dep");
+    return "<td class='blue'><a href='$dir'>$result</a></td>";
+    #return "<td class='blue'>BUG</td>";
+}
+
+sub gitIdToHtml($) {
+    my $gitid = $_[0];
+    return "<td><a class='gitid' href='http://git.buildroot.net/buildroot/commit/?id=$gitid'>" . (substr $gitid, 0, 7) . "</a></td>";
+}
+
 sub dumpPkg($) {
     my %pkg = %{$_[0]};
-    mkdir "html" if (! -e "html");
-    my $FILE;
-    open $FILE, '>', "html/$pkg{name}.html" || die "html/$pkg{name}.html: $!";
-    print $FILE $html_header_pkg;
-    print $FILE "<h1>$pkg{name}</h1>\n";
     for my $c (sort keys %{$pkg{cfgs}}) {
-        print $FILE "<h2>$c</h2>\n";
-        print $FILE "<p><table>\n";
-        print $FILE "<tr><td>Direct Dependencies</td><td>"             . (join " ", map { "<a href='$_->{name}.html'>$_->{name}</a>" } @{$pkg{cfgs}{$c}{depends}})         . "</td></tr>\n";
-        print $FILE "<tr><td>Recursives Dependencies</td><td>"         . (join " ", map { "<a href='$_->{name}.html'>$_->{name}</a>" } @{$pkg{cfgs}{$c}{depends_recurs}})  . "</td></tr>\n";
-        print $FILE "<tr><td>Direct Reverse Dependencies</td><td>"     . (join " ", map { "<a href='$_->{name}.html'>$_->{name}</a>" } @{$pkg{cfgs}{$c}{rdepends}})        . "</td></tr>\n";
-        print $FILE "<tr><td>Recursives Reverse Dependencies</td><td>" . (join " ", map { "<a href='$_->{name}.html'>$_->{name}</a>" } @{$pkg{cfgs}{$c}{rdepends_recurs}}) . "</td></tr>\n";
-        print $FILE "</table></p>\n";
         if (defined $pkg{cfgs}{$c}{last_build}) {
-            print $FILE "<p>Last results:<br/><table><tr><th>Place</th><th>Status</th><th>Build date</th><th>Git id</th><th>Duration</th></tr>\n";
-            my $dir = "context/$c/$pkg{name}";
+            my $dir = "results/$pkg{cfgs}{$c}{last_build}{id}";
             my $idx = 0;
+            $pkg{cfgs}{$c}{html_result} = "";
             while (-e "$dir") {
-                print $FILE "<td>$idx</td>";
-                $dir = "results/" . basename (readlink $dir);
-                my $result = firstLine "$dir/result";
-                if ($result eq "OK" || $result eq "Ok") {
-                    print $FILE "<td style='background-color:LightGreen;'><a href='../$dir'>OK</a></td>";
-                } elsif ($result eq "KO" || $result eq "Failed") {
-                    print $FILE "<td style='background-color:LightCoral;'><a href='../$dir'>KO</a></td>";
-                } elsif  ($result eq "Dep") {
-                    my $details = firstLine "$dir/details";
-                    print $FILE "<td style='background-color:SandyBrown;'><a href='../$dir'>Dep</a><br/><font size='1'><a href='$details.html'>$details</a></font></td>";
-                } else {
-                    print $FILE "<td style='background-color:LightCoral;'><a href='../$dir'>$result</a></td>";
-                }
-                print $FILE "<td>" . (strftime "%F", gmtime (firstLine "$dir/date")) . "</td>";
-                my $gitid = firstLine "$dir/gitid";
-                print $FILE "<td><a href='http://git.buildroot.net/buildroot/commit/?id=$gitid'>" . (substr $gitid, 0, 8) . "</td>";
-                print $FILE "<td>" . (firstLine "$dir/duration") . "</td></tr>\n";
-                $dir = "$dir/previous_build";
+                my %res;
+                $res{last_build}{id}       = basename (realpath $dir);
+                $res{last_build}{result}   = firstLine "results/$res{last_build}{id}/result";
+                $res{last_build}{details}  = firstLine "results/$res{last_build}{id}/details";
+                $res{last_build}{duration} = firstLine "results/$res{last_build}{id}/duration";
+                $res{last_build}{date}     = firstLine "results/$res{last_build}{id}/date";
+                $pkg{cfgs}{$c}{html_result} .= "<td>$idx</td>";
+                $pkg{cfgs}{$c}{html_result} .= resultToHtml \%res;
+                $pkg{cfgs}{$c}{html_result} .= "<td>" . (strftime "%F", gmtime $res{last_build}{date}) . "</td>";
+                $pkg{cfgs}{$c}{html_result} .= gitIdToHtml(firstLine "results/$res{last_build}{id}/gitid");
+                $pkg{cfgs}{$c}{html_result} .= "<td>$res{last_build}{duration}</td></tr>\n";
+                $dir = "results/$res{last_build}{id}/previous_build";
                 $idx++;
             }
-            print $FILE "</table><p>\n";
-        } else {
-            print $FILE "<p>Never build</p>\n";
         }
     }
-    print $FILE <<EOF;
-</body></html>
-EOF
+    $tpl->process("package.html.in", { name => $pkg{name}, cfgs => $pkg{cfgs} }, "html/$pkg{name}.html") || die $tpl->error();
 }
 
 sub dumpResults($$) {
-    my %cfgs = %{$_[0]};
-    my %pkgs = %{$_[1]};
-   
-    mkdir "html" if (! -e "html");
-    my $FILE;
-    open $FILE, '>', "html/index.html" || die "html/index.html: $!";
-    print $FILE $html_header;
-    print $FILE "<p><table id='data'>\n";
-    print $FILE "<thead><tr><th>Configuration</th><th>" . (join "</th><th>", sort keys %cfgs) . "</th></tr></thead>\n";
-   
-    for my $p (sort keys %pkgs) {
-        print $FILE "<tr><th><a href='$p.html'>$p</a></th>";
-        for my $c (sort keys %cfgs) {
-            my $dir = "../context/$c/$p";
-            if (!defined $pkgs{$p}{cfgs}{$c}) {
-                print $FILE "<td style='background-color:LightSteelBlue;'>N/A</td>";
-            } elsif (!(defined $pkgs{$p}{cfgs}{$c}{last_build})) {
-                print $FILE "<td style='background-color:LightSteelBlue;'>Wait</td>";
-            } elsif ($pkgs{$p}{cfgs}{$c}{last_build}{result} eq "Ok" || $pkgs{$p}{cfgs}{$c}{last_build}{result} eq "OK") {
-                print $FILE "<td style='background-color:LightGreen;'><a href='$dir'>OK</a></td>";
-            } elsif ($pkgs{$p}{cfgs}{$c}{last_build}{result} eq "Failed" || $pkgs{$p}{cfgs}{$c}{last_build}{result} eq "KO") {
-                print $FILE "<td style='background-color:LightCoral;'><a href='$dir'>KO</a></td>";
-            } elsif ($pkgs{$p}{cfgs}{$c}{last_build}{result} eq "Dep") {
-                print $FILE "<td style='background-color:SandyBrown;'><a href='$dir'>Dep</a><br/><font size='1'><a href='$pkgs{$p}{cfgs}{$c}{last_build}{details}.html'>$pkgs{$p}{cfgs}{$c}{last_build}{details}</a></font></td>";
-            } else {
-                print $FILE "<td style='background-color:LightCoral;'><a href='$dir'>BUG</a></td>";
-            }
+    my ($cfgs, $pkgs) = @_;
+
+    for my $p (values %{$pkgs}) {
+        $p->{html_result} = "";
+        for my $c (keys %{$cfgs}) {
+            $p->{html_result} .= resultToHtml($p->{cfgs}{$c}) . "\n";
         }
-        print $FILE "</tr>\n";
     }
-    print $FILE <<EOF;
-</table></p>
-</body>
-</html>
-EOF
-    close $FILE;
+    $tpl->process("index.html.in", { cfgs => $cfgs, pkgs => $pkgs }, "html/index.html") || die $tpl->error();
 }
 
 
 sub dumpJobQueue($$) {
     my @jobs = @{$_[0]};
     my $current_idx = $_[1];
-
-    my $FILE;
-    open $FILE, '>', "html/jobqueue.html" || die "jobqueue.html: $!";
-    print $FILE $html_header;
-    print $FILE "<p><table>\n";
-    print $FILE "<thead><tr><th>Place</th><th>Package</th><th>Config</th><th>Status</th><th>Buildreason</th><th>Date</th><th>Git id</th><th>Build duration</th></tr></thead>\n";
     my $idx = 0;
     for my $r (@jobs) {
-        print $FILE "<tr>";
+        $r->{html_result} = "<tr>";
         if ($idx == $current_idx) {
-            print $FILE "<td><bold>&lt; $idx &gt;</bold></td>";
+            $r->{html_result} .= "<td><b>=&gt; $idx </b></td>";
         } else {
-            print $FILE "<td>$idx</td>";
+            $r->{html_result} .= "<td>$idx</td>";
         }
-        print $FILE "<td><a href='$r->{pkg}{name}.html'>$r->{pkg}{name}</td>";
-        print $FILE "<td>$r->{cfg}{name}</td>";
-        my $dir = "../context/$r->{cfg}{name}/$r->{pkg}{name}";
-        if (!(defined $r->{last_build})) {
-            print $FILE "<td style='background-color:LightSteelBlue;'>Wait</td>";
-        } elsif ($r->{last_build}{result} eq "Ok" ||  $r->{last_build}{result} eq "OK") {
-            print $FILE "<td style='background-color:LightGreen;'><a href='$dir'>OK</a></td>";
-        } elsif ($r->{last_build}{result} eq "Failed" || $r->{last_build}{result} eq "KO") {
-            print $FILE "<td style='background-color:LightCoral;'><a href='$dir'>KO</a></td>";
-        } elsif ($r->{last_build}{result} eq "Dep") {
-            print $FILE "<td style='background-color:SandyBrown;'><a href='$dir'>Dep</a><br/><font size='1'><a href='$r->{last_build}{details}.html'>$r->{last_build}{details}</a></font></td>";
-        } else {
-            print $FILE "<td style='background-color:LightSteelBlue;'><a href='$dir'>$r->{last_build}{result}</a></td>";
-        }
+        $r->{html_result} .= "<td><a href='$r->{pkg}{name}.html'>$r->{pkg}{name}</td>";
+        $r->{html_result} .= "<td>$r->{cfg}{name}</td>";
+        $r->{html_result} .= resultToHtml($r);
         
         if ($r->{forcerebuilt}) {
-            print $FILE "<td>Force rebuild</td>";
+            $r->{html_result} .= "<td>Force rebuild</td>";
         } elsif (!(defined $r->{last_build})) {
-            print $FILE "<td>Never built</td>";
+            $r->{html_result} .= "<td>Never built</td>";
         } elsif ($r->{pkg}{ctime} > $r->{last_build}{date}) {
-            print $FILE "<td>Modified</td>";
+            $r->{html_result} .= "<td>Modified</td>";
         } else {
             my $done = 0;
-            print $FILE "<td>";
+            $r->{html_result} .= "<td>";
             for my $d (@{$r->{depends_recurs}}) {
                 if ($d->{ctime} > $r->{last_build}{date}) {
-                    print $FILE "Dep ($d->{name}) modified<br/>";
+                    $r->{html_result} .= "Dep ($d->{name}) modified<br/>";
                     $done = 1; 
                 }
             }
             if (!$done) {
-                print $FILE "Normal";
+                $r->{html_result} .= "Normal";
             }
-            print $FILE "</td>";
+            $r->{html_result} .= "</td>";
         }
         if ($r->{last_build}) {
-            print $FILE "<td>" . (strftime "%F", gmtime $r->{last_build}{date}) . "</td>";
-            print $FILE "<td><a href='http://git.buildroot.net/buildroot/commit/?id=$r->{last_build}{gitid}'>" . (substr $r->{last_build}{gitid}, 0, 8) . "</td>";
-            print $FILE "<td>$r->{last_build}{duration}</td></tr>\n";
+            $r->{html_result} .= "<td>" . (strftime "%F", gmtime $r->{last_build}{date}) . "</td>";
+            $r->{html_result} .=  gitIdToHtml $r->{last_build}{gitid};
+            $r->{html_result} .= "<td>$r->{last_build}{duration}</td></tr>\n";
         } else {
-            print $FILE "<td>N/A</td>";
-            print $FILE "<td>N/A</td>";
-            print $FILE "<td>N/A</td></tr>\n";
+            $r->{html_result} .= "<td>N/A</td>";
+            $r->{html_result} .= "<td>N/A</td>";
+            $r->{html_result} .= "<td>N/A</td></tr>\n";
         }
         $idx++;
     }
-    print $FILE <<EOF;
-</table></p>
-</body>
-</html>
-EOF
-    close $FILE;
+    $tpl->process("jobqueue.html.in", { jobs => \@jobs }, "html/jobqueue.html") || die $tpl->error();
 }
 
 
@@ -732,7 +591,7 @@ while (1) {
             print $changes;
         }
         print ((strftime "%T", localtime(time)) . " Update packets modification times (take 5min)\n");
-        updateCTimes $pkgs;    
+        #updateCTimes $pkgs;
     }
     
     my $newtime = time;
