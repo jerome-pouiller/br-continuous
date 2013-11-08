@@ -415,7 +415,7 @@ sub dumpResults($$) {
 
     for my $p (values %{$pkgs}) {
         $p->{html_result} = "";
-        for my $c (keys %{$cfgs}) {
+        for my $c (sort keys %{$cfgs}) {
             $p->{html_result} .= resultToHtml($p->{cfgs}{$c}) . "\n";
         }
     }
