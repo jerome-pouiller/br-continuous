@@ -34,39 +34,37 @@
   <body>
   <a href='index.html'>[Home]</a> <a href='jobqueue.html'>[JobQueue]</a>
   <h1>[% name %]</h1>
+  (Since this is update only when package is built, some information may be outdated)<br/>
+  Last change on package: [% date.format(c.ctime, '%Y-%m-%d %H:%M:%S') %]
 [% FOREACH c IN cfgs %]
-        <h2><a href='cfg-[% c.key %].html'>[% c.key %]</a></h2>
-        (Since this is update only when package is built, some information may be outdated)
-        <p><table>
-          <tr>
-            <td>Direct Dependencies</td>
-            <td>[% FOREACH d IN c.value.depends %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
-          </tr><tr>
-            <td>Recursives Dependencies</td>
-            <td>[% FOREACH d IN c.value.depends_recurs %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
-          </tr><tr>
-            <td>Direct Reverse Dependencies</td>
-            <td>[% FOREACH d IN c.value.rdepends %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
-          </tr><tr>
-            <td>Recursives Reverse Dependencies</td>
-            <td>[% FOREACH d IN c.value.rdepends_recurs %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
-          </tr><tr>
-            <td>Last change</td>
-            <td>[% date.format(c.ctime, '%Y-%m-%d %H:%M:%S') %]</td>
-          </tr>
-        </table></p>
+    <h2><a href='cfg-[% c.key %].html'>[% c.key %]</a></h2>
+    <p><table>
+      <tr>
+        <td>Direct Dependencies</td>
+        <td>[% FOREACH d IN c.value.depends %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
+      </tr><tr>
+        <td>Recursives Dependencies</td>
+        <td>[% FOREACH d IN c.value.depends_recurs %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
+      </tr><tr>
+        <td>Direct Reverse Dependencies</td>
+        <td>[% FOREACH d IN c.value.rdepends %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
+      </tr><tr>
+        <td>Recursives Reverse Dependencies</td>
+        <td>[% FOREACH d IN c.value.rdepends_recurs %] <a href='[% d.name %].html'>[% d.name %]</a>[% END %]</td>
+      </tr>
+    </table></p>
 [% IF c.value.html_result %]
-        <p>Last results:<br/>
-          <table>
-            <thead>
-              <tr><th>Place</th><th>Status</th><th>Build date</th><th>Git id</th><th>Duration</th></tr>
-            </thead><tbody>
-              [% c.value.html_result %]
-            </tbody>
-          </table>
-        <p>
+    <p>Last results:<br/>
+      <table>
+        <thead>
+          <tr><th>Place</th><th>Status</th><th>Build date</th><th>Git id</th><th>Duration</th></tr>
+        </thead><tbody>
+          [% c.value.html_result %]
+        </tbody>
+      </table>
+    <p>
 [% ELSE %]
-        <p>Never build</p>
+    <p>Never build</p>
 [% END %]
 [% END %]
   </body>
