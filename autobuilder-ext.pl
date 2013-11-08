@@ -563,8 +563,10 @@ sub build($$$) {
     $j->{last_build}{duration} = (time - $time);
     writeLine "$outdir/duration", $j->{last_build}{duration};
     $j->{last_build}{result}   = firstLine "$outdir/result";
-    $j->{last_build}{details}  = firstLine "$outdir/details" if (-e "$outdir/details");
-
+    $j->{last_build}{details}  = firstLine "$outdir/details";
+    if ($j->{last_build}{result} ne $prev_result) {
+        $report .= "$j->{name}: $prev_result -> $j->{last_build}{result}\n";
+    }
     dumpPkg $j->{pkg};
     dumpJobQueue($jobs, $jobidx);
 }
