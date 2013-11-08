@@ -41,7 +41,7 @@ $(document).ready(function() {
         .red      { background-color: LightCoral !important; }
         .orange   { background-color: SandyBrown !important; }
         .small    { font-size: 50%; }
-        .sha1     { font-family: monospace; }
+        .gitid    { font-family: monospace; }
         table     { margin-left: auto; margin-right: auto; text-align: left; }
         thead     { vertical-align: middle; text-align: center; }
         table.dataTable tr.odd, tr:nth-child(odd)   { background-color:#eee; }

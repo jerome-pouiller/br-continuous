@@ -389,7 +389,7 @@ sub dumpPkg($) {
                 $res{last_build}{details}  = firstLine "results/$res{last_build}{id}/details";
                 $res{last_build}{duration} = firstLine "results/$res{last_build}{id}/duration";
                 $res{last_build}{date}     = firstLine "results/$res{last_build}{id}/date";
-                $pkg{cfgs}{$c}{html_result} .= "<td>$idx</td>";
+                $pkg{cfgs}{$c}{html_result} .= "<tr><td>$idx</td>";
                 $pkg{cfgs}{$c}{html_result} .= resultToHtml \%res;
                 $pkg{cfgs}{$c}{html_result} .= "<td>" . (strftime "%F", gmtime $res{last_build}{date}) . "</td>";
                 $pkg{cfgs}{$c}{html_result} .= gitIdToHtml(firstLine "results/$res{last_build}{id}/gitid");
