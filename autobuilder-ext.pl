@@ -365,7 +365,7 @@ sub resultToHtml($) {
     my $result = $res->{last_build}{result};
     return "<td class='green'><a href='$dir'>OK</a></td>" if ($result eq "OK" ||  $result eq "Ok");
     return "<td class='red'><a href='$dir'>KO</a></td>"   if ($result eq "KO" ||  $result eq "Failed");
-    return "<td class='orange'><a href='$dir'>Dep</a><br/><a class='small' href='$res->{details}.html'>$res->{last_build}{details}</a></td>" if ($result eq "Dep");
+    return "<td class='orange'><a href='$dir'>Dep</a><br/><a class='small' href='$res->{last_build}{details}.html'>$res->{last_build}{details}</a></td>" if ($result eq "Dep");
     return "<td class='blue'><a href='$dir'>$result</a></td>";
     #return "<td class='blue'>BUG</td>";
 }
