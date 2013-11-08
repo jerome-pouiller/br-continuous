@@ -381,9 +381,9 @@ sub updateStatus($) {
                 $j->{last_build}{duration} = firstLine "$dir/duration";
                 $j->{last_build}{gitid}    = firstLine "$dir/gitid";
                 $j->{last_build}{result}   = firstLine "$dir/result";
-                $j->{last_build}{outdirid} = firstLine "$dir/outdirid" if (-e "$dir/outdirid");
+                $j->{last_build}{outdirid} = firstLine "$dir/outdirid";
                 $j->{last_build}{forcerebuilt} = ((-e "$dir/force-rebuild") ? 1 : 0);
-                $j->{last_build}{details}  = firstLine "$dir/details" if (-e "$dir/details");
+                $j->{last_build}{details}  = firstLine "$dir/details";
             }
         }
     }
@@ -718,37 +718,40 @@ while (1) {
     }
     print ((strftime "%T", localtime(time)) . " Check changes on git\n");
     my $changes = qx(cd buildroot && git pull --rebase 2>&1);
-    if ($changes !~ /^Current branch .* is up to date.$/ || $rebuilddb) {
+    if ($changes !~ /^Current branch .* is up to date.$/) {
         $rebuilddb = 1;
         print $changes;
+    }
+    if ($rebuilddb) {
         print ((strftime "%T", localtime(time)) . " Get package list\n");
         $pkgs = getPkgList;
         print ((strftime "%T", localtime(time)) . " Update configurations\n");
         for my $c (values %$cfgs) {
-            my $changes = qx(yes | $MAKE O=../cfgs/$c->{name} oldconfig 2>&1);
+            my $changes = qx(yes | $MAKE -s O=../cfgs/$c->{name} oldconfig 2>&1);
             print $changes;
         }
         print ((strftime "%T", localtime(time)) . " Update packets modification times (take 5min)\n");
         updateCTimes $pkgs;    
     }
     
-    print ((strftime "%T", localtime(time)) . " Check config modifications\n");
     my $newtime = time;
     for my $c (values %$cfgs) {
         if (mtime "cfgs/$c->{name}/.config" > $lastchecktime || $rebuilddb) {
             print ((strftime "%T", localtime(time)) . " Update targets and dependencies of $c->{name}\n");
             updateTargetsAndDeps $c, $pkgs;
+            $rebuilddb = 1;
         }
     }
+    $lastchecktime = $newtime;
+
     if ($rebuilddb) {
         print ((strftime "%T", localtime(time)) . " Update build status (take 5min)\n");
         updateStatus $pkgs;    
     }
-    $lastchecktime = $newtime;
     
     print ((strftime "%T", localtime(time)) . " Dump global status\n");
     dumpResults $cfgs, $pkgs;    
-    if ($redumpkgs &&  $rebuilddb) {
+    if ($redumpkgs && $rebuilddb) {
         print ((strftime "%T", localtime(time)) . " Dump packages result (take 20min)\n");
         for my $p (values %$pkgs) {
             dumpPkg $p;
