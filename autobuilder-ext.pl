@@ -268,7 +268,7 @@ sub updateTargetsAndDeps($$) {
             push @args, "$pkg-show-depends"
         }
         print ((strftime "%T", localtime(time)) . " run (take around 15s): make -s O=$cfg->{dir} ...-show-depends\n");
-        return split /\n/, qx($MAKE -s O=$cfg->{dir} @args);
+        return split /\n/, qx($MAKE -s O=$cfg->{dir} @args), -1;
     }
   
     sub computeRecursiveDepends($$) {
