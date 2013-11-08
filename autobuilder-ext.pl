@@ -227,9 +227,10 @@ sub updateCTimes($) {
     my %pkgs = %{$_[0]};
     for my $name (keys %pkgs) {
         next if ($name =~ /^host-(.*)$/ && $pkgs{$1});
-        $pkgs{"$name"}{ctime} = qx(cd buildroot && git log --pretty="%ct" -1 $pkgs{$name}{dir});
-        chomp $pkgs{"$name"}{ctime};
-        $pkgs{"host-$name"}{ctime} = $pkgs{$name}{ctime} if ($pkgs{"host-$name"})
+        my $time = qx(cd buildroot && git log --pretty="%ct" -1 $pkgs{$name}{dir});
+        chomp $time;
+        $pkgs{"$name"}{ctime} = $time if $pkgs{"$name"};
+        $pkgs{"host-$name"}{ctime} = $time if $pkgs{"host-$name"};
     }
 }
 
