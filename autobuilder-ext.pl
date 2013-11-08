@@ -35,6 +35,7 @@ $ENV{LANG} = "C";
 use strict;
 use File::Basename;
 use POSIX qw(strftime);
+use Cwd qw(realpath);
 use MIME::Lite;
 my $report = "";
 my $reporttime = time;
@@ -376,7 +377,7 @@ sub updateStatus($) {
             my $dir = "context/$j->{cfg}{name}/$j->{pkg}{name}";
             if (-e $dir) {
                 #print "Detect context/$cfg{cfg}/$pkg{name}\n";
-                $j->{last_build}{id}       = basename (readlink $dir);
+                $j->{last_build}{id}       = basename (realpath $dir);
                 $j->{last_build}{date}     = firstLine "$dir/date";
                 $j->{last_build}{duration} = firstLine "$dir/duration";
                 $j->{last_build}{gitid}    = firstLine "$dir/gitid";
