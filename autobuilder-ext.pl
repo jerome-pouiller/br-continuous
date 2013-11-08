@@ -69,16 +69,17 @@ sub writeLine {
 
 sub sendReport {
     $reporttime = time; 
-    my $msg = MIME::Lite->new(
-        From     => 'autobuilder@sysmic.org',
-        To       => 'jezz@sysmic.org',
-        # Cc       => 'list@buildroot.net',
-        Subject  => "Autobuild report of " . (strftime "%F", gmtime $reporttime),
-        Data     => $report
-    );
-
-    $msg->send;
-    $report = "";
+    if ($report)  {
+        my $msg = MIME::Lite->new(
+            From     => 'autobuilder@sysmic.org',
+            To       => 'jezz@sysmic.org',
+            # Cc       => 'list@buildroot.net',
+            Subject  => "Autobuild report of " . (strftime "%F", gmtime $reporttime),
+            Data     => $report
+        );
+        $msg->send;
+        $report = "";
+    }
 }
 
 sub getPkgList() {
