@@ -30,6 +30,8 @@ my $MAKE = "make -C buildroot";
 #   pkgs => ( )
 # }
 
+$ENV{LANG} = "C";
+
 use strict;
 use File::Basename;
 use POSIX qw(strftime);
