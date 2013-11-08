@@ -767,11 +767,16 @@ while (1) {
     } else {
         $jobidx++;
     }
-    print ((strftime "%T", localtime(time)) . " Dump job list\n");
-    dumpJobQueue($jobs, $jobidx);
-    print ((strftime "%T", localtime(time)) . " Build $jobidx: $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}\n");
-    build $jobs->[$jobidx], $jobs, $jobidx;
-    print ((strftime "%T", localtime(time)) . " Rebuild result for $jobs->[$jobidx]{pkg}{name}\n");
-    dumpPkg $jobs->[$jobidx]{pkg};
+    if ( $jobidx <  @$jobs) {
+        print ((strftime "%T", localtime(time)) . " Dump job list\n");
+        dumpJobQueue($jobs, $jobidx);
+        print ((strftime "%T", localtime(time)) . " Build $jobidx: $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}\n");
+        build $jobs->[$jobidx], $jobs, $jobidx;
+        print ((strftime "%T", localtime(time)) . " Rebuild result for $jobs->[$jobidx]{pkg}{name}\n");
+        dumpPkg $jobs->[$jobidx]{pkg};
+    } else {
+        print ( "Waiting for an update....\n");
+        sleep(10);
+    }
     $rebuilddb = 0;
 }
