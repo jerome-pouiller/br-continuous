@@ -35,6 +35,7 @@
   <h1>[% cfg.name %]</h1>
     <p>
       <table>
+        <tr><td colspan="2"><b><a href='[% cfg.dir %]/.config'>Configuration File</a></b></td></tr>
         <tr><td>Architecture</td><td>[% cfg.arch %]</td></tr>
         <tr><td>C Library</td><td>[% cfg.libc %]</td></tr>
         <tr><td>Toolchain</td><td>[% cfg.toolchain %]</td></tr>
@@ -42,7 +43,6 @@
 [% IF cfg.inhibit %]
         <tr><td colspan="2"><b>Currently inhbited</b></td></tr>
 [% END %]
-        <tr><td colspan="2"><a href='[% cfg.dir %]/.config'>Configuration File</a></td></tr>
         <tr><td>Packages included</td><td> 
 [% FOREACH p IN cfg.packages %]
           <a href='[% p.name %].html'>[% p.name %]</a> 
