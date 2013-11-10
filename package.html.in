@@ -37,7 +37,7 @@
   (Since this is update only when package is built, some information may be outdated)<br/>
   Last change on package: [% date.format(c.ctime, '%Y-%m-%d %H:%M:%S') %]
 [% FOREACH c IN cfgs %]
-    <h2><a href='cfg-[% c.key %].html'>[% c.key %]</a></h2>
+    <h2 id='[% c.key %]'><a href='cfg-[% c.key %].html'>[% c.key %]</a></h2>
     <p><table>
       <tr>
         <td>Direct Dependencies</td>
