@@ -2,6 +2,7 @@
 # kate: space-indent on; indent-width 4; mixedindent off; indent-mode cstyle; 
 
 my $MAKE = "make -C buildroot";
+my $URL = "http://sysmic.org/~jezz/br-continuous";
 # Three main data:
 #   %cfgs iterator: $c
 #   %pkgs iterator: $p $dep $depdep
@@ -535,12 +536,13 @@ sub build($$$) {
         system "$MAKE O=../cfgs/$cname clean";
         writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-');
     }
-    my $prev_result = ($j->{last_build}{result} || "Wait");
+    my %prev_build = %{$j->{last_build}};
     $j->{last_build}{id}       = $new_id;
     $j->{last_build}{date}     = $time;
     $j->{last_build}{duration} = "N/A";
     $j->{last_build}{gitid}    = qx(cd buildroot && git rev-parse HEAD);
     $j->{last_build}{result}   = "Cur";
+    $j->{last_build}{details}  = undef;
     $j->{last_build}{outdirid} = firstLine "cfgs/$cname/dirid";
     $j->{last_build}{forcerebuilt} = 0;
     delete $j->{last_build}{details};
@@ -564,8 +566,14 @@ sub build($$$) {
     writeLine "$outdir/duration", $j->{last_build}{duration};
     $j->{last_build}{result}   = firstLine "$outdir/result";
     $j->{last_build}{details}  = firstLine "$outdir/details";
-    if ($j->{last_build}{result} ne $prev_result) {
-        $report .= "$j->{name}: $prev_result -> $j->{last_build}{result}\n";
+    if ($j->{last_build}{result} ne $prev_build{result}) {
+        my $explanation = "$j->{pkg}{name}/$j->{cfg}{name} [$URL/html/$j->{pkg}{name}.html#$j->{cfg}{name}]: $prev_build{result}";
+        $explanation .=  " ($prev_build{details})" if ($prev_build{result} eq "Dep");
+        $explanation .=  " [$URL/results/$prev_build{id}]";
+        $explanation .=  " -> $j->{last_build}{result}";
+        $explanation .=  " ($j->{last_build}{details})" if ($j->{last_build}{result} eq "Dep");
+        $explanation .=  " [$URL/results/$j->{last_build}{id}]\n";
+        $report .= "$explanation";
     }
     dumpPkg $j->{pkg};
     dumpJobQueue($jobs, $jobidx);
