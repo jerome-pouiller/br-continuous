@@ -14,12 +14,13 @@
     <script type="text/javascript" charset="utf-8">
 $(document).ready(function() {
     var table = $('#data').dataTable({
-        "bPaginate": false,
-        "bLengthChange": false,
         "bFilter": true,
         "bSort":true,
+        "bPaginate": false,
+        "bLengthChange": false,
+        "bSortClass": false,
         "bInfo": false,
-        "bAutoWidth": true
+        "bAutoWidth": false
     } );
     new FixedHeader(table);
 } );
