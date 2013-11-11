@@ -537,7 +537,7 @@ sub build($$$) {
         writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-');
     }
     my %prev_build;
-    if $j->{last_build} {
+    if ($j->{last_build}) {
         %prev_build = %{$j->{last_build}};
     } else {
         $prev_build{result} = "Wait";
