@@ -35,7 +35,7 @@
   <a href='index.html'>[Home]</a> <a href='jobqueue.html'>[JobQueue]</a>
   <h1>[% name %]</h1>
   (Since this is update only when package is built, some information may be outdated)<br/>
-  Last change on package: [% date.format(c.ctime, '%Y-%m-%d %H:%M:%S') %]
+  Last commit on this package in buildroot tree: [% date.format(c.ctime, '%Y-%m-%d %H:%M:%S') %]
 [% FOREACH c IN cfgs %]
     <h2 id='[% c.key %]'><a href='cfg-[% c.key %].html'>[% c.key %]</a></h2>
     <p><table>
