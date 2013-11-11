@@ -43,6 +43,22 @@ my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
 
+# Change mail configuration for report as needed
+sub sendReport {
+    $reporttime = time; 
+    if ($report)  {
+        my $msg = MIME::Lite->new(
+            From     => 'autobuilder@sysmic.org',
+            To       => 'jezz@sysmic.org',
+            # Cc       => 'list@buildroot.net',
+            Subject  => "Autobuild report of " . (strftime "%F", gmtime $reporttime),
+            Data     => $report
+        );
+        $msg->send;
+        $report = "";
+    }
+}
+
 # Print message with timestamp
 sub pr(@) {
     print ((strftime "%T ", localtime(time)) . "@_\n");
@@ -71,21 +87,6 @@ sub writeLine {
     open ($FILE, '>', $_[0]) || die "$_[0]: $!";
     print { $FILE } $_[1] . "\n";
     close $FILE;
-}
-
-sub sendReport {
-    $reporttime = time; 
-    if ($report)  {
-        my $msg = MIME::Lite->new(
-            From     => 'autobuilder@sysmic.org',
-            To       => 'jezz@sysmic.org',
-            # Cc       => 'list@buildroot.net',
-            Subject  => "Autobuild report of " . (strftime "%F", gmtime $reporttime),
-            Data     => $report
-        );
-        $msg->send;
-        $report = "";
-    }
 }
 
 sub getPkgList() {
