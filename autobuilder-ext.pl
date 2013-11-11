@@ -522,20 +522,14 @@ sub build($$$) {
     mkdir "results" if (! -e "results");
     mkdir "context" if (! -e "context");
     mkdir "context/$cname" if (! -e "context/$cname");
-    mkdir "results/$new_id";
-    symlink "../$old_id", "results/$new_id/previous_build" if $old_id;
-    
-    my $outdir = "context/$cname/$pname";
-    unlink "$outdir";
-    symlink "../../results/$new_id", "$outdir" || die $!;
         
     writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-')  if (! -e "cfgs/$cname/dirid");
-
     if ($j->{priority} == 0 && $j->{last_build} && $j->{last_build}{outdirid} && $j->{last_build}{outdirid} eq firstLine "cfgs/$cname/dirid") {
         print "run: $MAKE O=../cfgs/$cname clean\n";
         system "$MAKE O=../cfgs/$cname clean";
         writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-');
     }
+
     my %prev_build;
     if ($j->{last_build}) {
         %prev_build = %{$j->{last_build}};
@@ -550,27 +544,32 @@ sub build($$$) {
     $j->{last_build}{details}  = undef;
     $j->{last_build}{outdirid} = firstLine "cfgs/$cname/dirid";
     $j->{last_build}{forcerebuilt} = 0;
-    delete $j->{last_build}{details};
 
-    writeLine "$outdir/long_id", "$cname $pname $time";
-    writeLine "$outdir/date", $j->{last_build}{date};
-    writeLine "$outdir/result", $j->{last_build}{result};
-    writeLine "$outdir/outdirid", $j->{last_build}{outdirid};
-    writeLine "$outdir/gitid", $j->{last_build}{gitid};
-    writeLine "$outdir/duration", $j->{last_build}{duration};
+    mkdir "results/$new_id";
+    symlink "../$old_id", "results/$new_id/previous_build" if $old_id;
+    writeLine "results/$new_id/long_id",  "$cname $pname $time";
+    writeLine "results/$new_id/date",     $j->{last_build}{date};
+    writeLine "results/$new_id/result",   $j->{last_build}{result};
+    writeLine "results/$new_id/outdirid", $j->{last_build}{outdirid};
+    writeLine "results/$new_id/gitid",    $j->{last_build}{gitid};
+    writeLine "results/$new_id/duration", $j->{last_build}{duration};
+
+    unlink "context/$cname/$pname";
+    symlink "../../results/$new_id", "context/$cname/$pname" || die $!;
     dumpPkg $j->{pkg};
     dumpJobQueue($jobs, $jobidx);
 
-    my $exit_status;
-    if (-x "cfgs/$cname/buildPkg") {
-        $exit_status = system "cfgs/$cname/buildPkg cfgs/$cname $pname $outdir";
-    } else {
-        $exit_status = buildPkg "../cfgs/$cname", $pname, $outdir;
-    }
+    #my $exit_status;
+    #if (-x "cfgs/$cname/buildPkg") {
+    #    $exit_status = system "cfgs/$cname/buildPkg cfgs/$cname $pname results/$new_id";
+    #} else {
+    #     $exit_status = buildPkg "../cfgs/$cname", $pname, "results/$new_id";
+    #}
+    buildPkg "../cfgs/$cname", $pname, "results/$new_id";
     $j->{last_build}{duration} = (time - $time);
-    writeLine "$outdir/duration", $j->{last_build}{duration};
-    $j->{last_build}{result}   = firstLine "$outdir/result";
-    $j->{last_build}{details}  = firstLine "$outdir/details";
+    writeLine "results/$new_id/duration", $j->{last_build}{duration};
+    $j->{last_build}{result}   = firstLine "results/$new_id/result";
+    $j->{last_build}{details}  = firstLine "results/$new_id/details";
     if ($j->{last_build}{result} ne $prev_build{result}) {
         my $explanation = "$j->{pkg}{name}/$j->{cfg}{name} [$URL/html/$j->{pkg}{name}.html#$j->{cfg}{name}]: $prev_build{result}";
         $explanation .=  " ($prev_build{details})" if ($prev_build{result} eq "Dep");
