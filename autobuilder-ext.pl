@@ -43,6 +43,11 @@ my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
 
+# Print message with timestamp
+sub pr(@) {
+    print ((strftime "%T ", localtime(time)) . "@_\n");
+}
+
 # Return modification time of one file
 sub mtime($) {
     return 0 if (!-e $_[0]);    
@@ -172,7 +177,7 @@ sub updateTargetsAndDeps($$) {
 
     sub getTargets($) {
         my $cfg = $_[0];
-        print ((strftime "%T", localtime(time)) . " run (take around 4s): make -s O=$cfg->{dir} show-targets\n");
+        pr "run (take around 4s): make -s O=$cfg->{dir} show-targets";
         my @packages = split / /, qx($MAKE -s O=$cfg->{dir} show-targets);
         @packages = grep {!/^target-/} @packages;  
         @packages = grep {!/^rootfs-/} @packages;  
@@ -186,7 +191,7 @@ sub updateTargetsAndDeps($$) {
         for my $pkg (@{$packages}) {
             push @args, "$pkg-show-depends"
         }
-        print ((strftime "%T", localtime(time)) . " run (take around 15s): make -s O=$cfg->{dir} ...-show-depends\n");
+        pr "run (take around 15s): make -s O=$cfg->{dir} ...-show-depends";
         return split /\n/, qx($MAKE -s O=$cfg->{dir} @args), -1;
     }
   
@@ -196,7 +201,7 @@ sub updateTargetsAndDeps($$) {
         my $modified = 1;
         my $cname = $cfg->{name};
         while ($modified == 1) {
-            print ((strftime "%T", localtime(time)) . " Compute recursive depends ($type)\n");
+            pr "Compute recursive depends ($type)";
             $modified = 0;
             for my $pkg (@{$cfg->{packages}}) {
                 my $depends = $pkg->{cfgs}{$cname}{$type};
@@ -592,36 +597,36 @@ my $cfgs;
 my $jobidx = 0;
 my $jobs;
 
-print ((strftime "%T", localtime(time)) . " Get config list\n");
+pr "Get config list";
 $cfgs = getCfgList;
 
 while (1) {
     if (time > $reporttime + (3600 * 24)) {
-        print ((strftime "%T", localtime(time)) . " Send report\n");
+        pr "Send report";
         sendReport;
     }
-    print ((strftime "%T", localtime(time)) . " Check changes on git\n");
+    pr "Check changes on git";
     my $changes = qx(cd buildroot && git pull --rebase 2>&1);
     if ($changes !~ /^Current branch .* is up to date.$/) {
         $rebuilddb = 1;
         print $changes;
     }
     if ($rebuilddb) {
-        print ((strftime "%T", localtime(time)) . " Get package list\n");
+        pr "Get package list";
         $pkgs = getPkgList;
-        print ((strftime "%T", localtime(time)) . " Update configurations\n");
+        pr "Update configurations";
         for my $c (values %$cfgs) {
             my $changes = qx(yes | $MAKE -s O=../cfgs/$c->{name} oldconfig 2>&1);
             print $changes;
         }
-        print ((strftime "%T", localtime(time)) . " Update packets modification times (take 5min)\n");
+        pr "Update packets modification times (take 5min)";
         updateCTimes $pkgs;
     }
     
     my $newtime = time;
     for my $c (values %$cfgs) {
         if (mtime "cfgs/$c->{name}/.config" > $lastchecktime || $rebuilddb) {
-            print ((strftime "%T", localtime(time)) . " Update targets and dependencies of $c->{name}\n");
+            pr "Update targets and dependencies of $c->{name}";
             updateTargetsAndDeps $c, $pkgs;
             $rebuilddb = 1;
         }
@@ -629,42 +634,42 @@ while (1) {
     $lastchecktime = $newtime;
 
     if ($rebuilddb) {
-        print ((strftime "%T", localtime(time)) . " Update build status (take 5min)\n");
+        pr "Update build status (take 5min)";
         updateStatus $pkgs;    
-        print ((strftime "%T", localtime(time)) . " Update configs pages\n");
+        pr "Update configs pages";
         dumpCfgs $cfgs;
     }
     
-    print ((strftime "%T", localtime(time)) . " Dump global status\n");
+    pr "Dump global status";
     dumpResults $cfgs, $pkgs;    
     if ($redumpkgs && $rebuilddb) {
-        print ((strftime "%T", localtime(time)) . " Dump packages result (take 20min)\n");
+        pr "Dump packages result (take 20min)";
         for my $p (values %$pkgs) {
             dumpPkg $p;
         }
     }
 
-    print ((strftime "%T", localtime(time)) . " Update forced packages\n");
+    pr "Update forced packages";
     $rebuilddb += updateForce $pkgs;
-    print ((strftime "%T", localtime(time)) . " Update inhibit configs\n");
+    pr "Update inhibit configs";
     $rebuilddb += updateInhibit $cfgs; # TODO: also check new configurations
 
     if ($rebuilddb) {
-        print ((strftime "%T", localtime(time)) . " Compute job list\n");
+        pr "Compute job list";
         $jobs = getJobs $pkgs;
         $jobidx = 0;
     } else {
         $jobidx++;
     }
     if ( $jobidx <  scalar @$jobs) {
-        print ((strftime "%T", localtime(time)) . " Dump job list\n");
+        pr "Dump job list";
         dumpJobQueue($jobs, $jobidx);
-        print ((strftime "%T", localtime(time)) . " Build $jobidx: $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}\n");
+        pr "Build $jobidx: $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}";
         build $jobs->[$jobidx], $jobs, $jobidx;
-        print ((strftime "%T", localtime(time)) . " Rebuild result for $jobs->[$jobidx]{pkg}{name}\n");
+        pr "Rebuild result for $jobs->[$jobidx]{pkg}{name}";
         dumpPkg $jobs->[$jobidx]{pkg};
     } else {
-        print ( "Waiting for an update....\n");
+        pr "Waiting for an update....";
         sleep(10);
     }
     $rebuilddb = 0;
