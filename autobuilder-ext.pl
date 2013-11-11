@@ -536,7 +536,12 @@ sub build($$$) {
         system "$MAKE O=../cfgs/$cname clean";
         writeLine "cfgs/$cname/dirid", qx(uuidgen | cut -f 1 -d '-');
     }
-    my %prev_build = %{$j->{last_build}};
+    my %prev_build;
+    if $j->{last_build} {
+        %prev_build = %{$j->{last_build}};
+    } else {
+        $prev_build{result} = "Wait";
+    }
     $j->{last_build}{id}       = $new_id;
     $j->{last_build}{date}     = $time;
     $j->{last_build}{duration} = "N/A";
@@ -569,10 +574,11 @@ sub build($$$) {
     if ($j->{last_build}{result} ne $prev_build{result}) {
         my $explanation = "$j->{pkg}{name}/$j->{cfg}{name} [$URL/html/$j->{pkg}{name}.html#$j->{cfg}{name}]: $prev_build{result}";
         $explanation .=  " ($prev_build{details})" if ($prev_build{result} eq "Dep");
-        $explanation .=  " [$URL/results/$prev_build{id}]";
+        #$explanation .=  " [$URL/results/$prev_build{id}]" if ($prev_build{result} ne "Wait");
         $explanation .=  " -> $j->{last_build}{result}";
         $explanation .=  " ($j->{last_build}{details})" if ($j->{last_build}{result} eq "Dep");
-        $explanation .=  " [$URL/results/$j->{last_build}{id}]\n";
+        #$explanation .=  " [$URL/results/$j->{last_build}{id}]";
+        $explanation .=  "\n";
         $report .= "$explanation";
     }
     dumpPkg $j->{pkg};
