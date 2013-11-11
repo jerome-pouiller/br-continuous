@@ -657,7 +657,7 @@ while (1) {
     } else {
         $jobidx++;
     }
-    if ( $jobidx <  @$jobs) {
+    if ( $jobidx <  scalar @$jobs) {
         print ((strftime "%T", localtime(time)) . " Dump job list\n");
         dumpJobQueue($jobs, $jobidx);
         print ((strftime "%T", localtime(time)) . " Build $jobidx: $jobs->[$jobidx]{cfg}{name}/$jobs->[$jobidx]{pkg}{name}\n");
