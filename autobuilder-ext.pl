@@ -187,8 +187,10 @@ sub updateTargetsAndDeps($$) {
         my $cfg = $_[0];
         pr "run (take around 4s): make -s O=$cfg->{dir} show-targets";
         my @packages = split / /, qx($MAKE -s O=$cfg->{dir} show-targets);
-        @packages = grep {!/^target-/} @packages;  
-        @packages = grep {!/^rootfs-/} @packages;  
+        chomp(@packages);
+        @packages = grep {!/^target-/} @packages;
+        @packages = grep {!/^rootfs-/} @packages;
+        @packages = uniq  @packages;
         return @packages;
     }
   
