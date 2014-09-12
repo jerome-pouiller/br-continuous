@@ -502,13 +502,19 @@ sub buildPkg($$$) {
     }
     if ($ret >> 8) {
         my $FILE;
+        my ($dep_pkg, $dep_step);
         open $FILE, "$out/build_log";
         my $reason = (grep /^\[7m>>> .*\[27m$/, <$FILE>)[-1];
-        $reason =~  /^\[7m>>> ([^ ]*) ([^ ]*) (.*)\[27m/;
+        if ($reason) {
+            $reason =~  /^\[7m>>> ([^ ]*) ([^ ]*) (.*)\[27m/;
+            ($dep_pkg, $dep_step) = ($1, $3);
+        } else {
+            ($dep_pkg, $dep_step) = ("Configuration error", "checking");
+        }
         close $FILE;
-        print "Build of $pkg failed because of $1 while $3\n";
-        if ($1 ne $pkg) {
-            writeLine "$out/details", "$1";
+        print "Build of $pkg failed because of $dep_pkg while $dep_step\n";
+        if ($dep_pkg ne $pkg) {
+            writeLine "$out/details", "$dep_pkg";
             writeLine "$out/result", "Dep";
         } else {
             writeLine "$out/result", "KO";
