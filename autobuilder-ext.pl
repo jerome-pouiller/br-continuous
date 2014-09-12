@@ -690,10 +690,13 @@ while (1) {
         pr "Update packets modification times (take 5min)";
         updateCTimes $pkgs;
     }
-    
+
+    pr "Update inhibit configs";
+    $rebuilddb += updateInhibit $cfgs; # TODO: also check new configurations
+
     my $newtime = time;
     for my $c (values %$cfgs) {
-        if (mtime "cfgs/$c->{name}/.config" > $lastchecktime || $rebuilddb) {
+        if (!$c->{inhibit} && (mtime "cfgs/$c->{name}/.config" > $lastchecktime || $rebuilddb)) {
             pr "Update targets and dependencies of $c->{name}";
             updateTargetsAndDeps $c, $pkgs;
             $rebuilddb = 1;
@@ -719,8 +722,6 @@ while (1) {
 
     pr "Update forced packages";
     $rebuilddb += updateForce $pkgs;
-    pr "Update inhibit configs";
-    $rebuilddb += updateInhibit $cfgs; # TODO: also check new configurations
 
     if ($rebuilddb) {
         pr "Compute job list";
