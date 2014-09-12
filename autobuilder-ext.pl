@@ -193,18 +193,21 @@ sub updateTargetsAndDeps($$) {
         @packages = uniq  @packages;
         return @packages;
     }
-  
+
     sub getDepends($$) {
         my $cfg = $_[0];
         my $packages = $_[1];
         my @args;
+        my @result;
         for my $pkg (@{$packages}) {
             push @args, "$pkg-show-depends"
         }
         pr "run (take around 15s): make -s O=$cfg->{dir} ...-show-depends";
-        return split /\n/, qx($MAKE -s O=$cfg->{dir} @args), -1;
+        @result = split /\n/, qx($MAKE -s O=$cfg->{dir} @args), -1;
+        s/\bcurl\b/libcurl/ for @result;
+        return @result;
     }
-  
+
     sub computeRecursiveDepends($$) {
         my $cfg = $_[0];
         my $type = $_[1]; # Should be depends_recurs or rdepends_recurs
