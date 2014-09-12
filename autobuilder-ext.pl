@@ -44,6 +44,7 @@ use List::MoreUtils qw(uniq);
 my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
+my $changereport = "";
 
 ( -e "buildroot" ) || die "buildroot/ does not exist";
 ( -e "buildroot/.git" ) || die "buildroot/ is not managed by git";
@@ -61,6 +62,20 @@ sub sendReport {
         );
         $msg->send;
         $report = "";
+    }
+}
+
+sub sendChangeReport {
+    if ($changereport)  {
+        my $msg = MIME::Lite->new(
+            From     => 'autobuilder@sysmic.org',
+            To       => 'jezz@sysmic.org',
+            # Cc       => 'list@buildroot.net',
+            Subject  => "Autobuild changes in configs",
+            Data     => $changereport
+        );
+        $msg->send;
+        $changereport = "";
     }
 }
 
@@ -635,11 +650,13 @@ while (1) {
         sendReport;
     }
     pr "Check changes on git";
-    my $changes = qx(cd buildroot && git pull --rebase 2>&1);
-    if ($changes !~ /^Current branch .* is up to date.$/) {
+    my $changes = qx(cd buildroot && git pull 2>&1);
+    if ($changes !~ /^.* up.to.date\.$/) {
         $rebuilddb = 1;
+        $changereport .= $changes;
         print $changes;
     }
+
     if ($rebuilddb) {
         pr "Get package list";
         $pkgs = getPkgList;
@@ -690,6 +707,8 @@ while (1) {
         pr "Update packets modification times (take 5min)";
         updateCTimes $pkgs;
     }
+
+    sendChangeReport;
 
     pr "Update inhibit configs";
     $rebuilddb += updateInhibit $cfgs; # TODO: also check new configurations
