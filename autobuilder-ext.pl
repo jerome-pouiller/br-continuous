@@ -76,7 +76,7 @@ sub mtime($) {
 }
 
 # Return first line of one file
-sub firstLine {
+sub firstLine($) {
     return undef if (! -e $_[0]);
     my $FILE;
     open ($FILE, '<', $_[0]) || die "$_[0]: $!";
@@ -87,7 +87,7 @@ sub firstLine {
 }
 
 # Write a line in a file
-sub writeLine {
+sub writeLine($$) {
     my $FILE;
     open ($FILE, '>', $_[0]) || die "$_[0]: $!";
     print { $FILE } $_[1] . "\n";
