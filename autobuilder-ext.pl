@@ -43,6 +43,9 @@ my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
 
+( -e "buildroot" ) || die "buildroot/ does not exist";
+( -e "buildroot/.git" ) || die "buildroot/ is not managed by git";
+
 # Change mail configuration for report as needed
 sub sendReport {
     $reporttime = time; 
