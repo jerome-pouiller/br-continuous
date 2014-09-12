@@ -94,6 +94,16 @@ sub writeLine($$) {
     close $FILE;
 }
 
+sub file_grep($$) {
+    my $string1 = $_[0];
+    my $srce = $_[1];
+
+    open my $fh, $srce or die "Could not open $srce: $!";
+
+    my $result = grep /$string1/, <$fh>;
+    return $result;
+}
+
 sub getPkgList() {
   my %list;
   for my $file (<buildroot/*/*.mk buildroot/*/*/*.mk buildroot/package/*/*/*.mk>) {
@@ -635,8 +645,47 @@ while (1) {
         $pkgs = getPkgList;
         pr "Update configurations";
         for my $c (values %$cfgs) {
-            my $changes = qx(yes | $MAKE -s O=../cfgs/$c->{name} oldconfig 2>&1);
-            print $changes;
+            if (!$c->{inhibit}) {
+                my $changes;
+                do {
+                    qx(yes "" | $MAKE -s O=../cfgs/$c->{name} oldconfig 2>&1);
+                    $changes = qx(~/conf/bin/br_diffconfig cfgs/$c->{name}/.config.old cfgs/$c->{name}/.config);
+                    my @options = split /\n/, $changes;
+                    for my $line (@options) {
+                        if ($line =~ m/\+(PACKAGE_\w*) n/) {
+                            my $opt = $1;
+                            qx(~/conf/bin/br_config --file cfgs/$c->{name}/.config -e BR2_$opt);
+                        }
+                    }
+                    open my $FH, "cfgs/$c->{name}/.config" || die "Cannot open cfgs/$c->{name}/.config";
+                    for my $line (<$FH>) {
+                        if ($line =~ /^(BR2_\w*)=y/) {
+                            my $opt = $1;
+                            if (file_grep "^config $opt\$", "buildroot/Config.in.legacy") {
+                                qx(~/conf/bin/br_config --file cfgs/$c->{name}/.config -d $opt);
+                            }
+                        }
+                        if ($line =~ /^(BR2_\w*)=".+"/) {
+                            my $opt = $1;
+                            if (file_grep "^config $opt\$", "buildroot/Config.in.legacy") {
+                                qx(~/conf/bin/br_config --file cfgs/$c->{name}/.config --set-str $opt "");
+                            }
+                        }
+                    }
+                    close $FH;
+		    # qx(~/conf/bin/br_config --file cfgs/$c->{name}/.config -d BR2_LEGACY);
+                    $changes = qx(~/conf/bin/br_diffconfig cfgs/$c->{name}/.config.old cfgs/$c->{name}/.config);
+                    $changereport .= $changes;
+                    print $changes;
+                } while ($changes);
+                if (system("$MAKE -s O=../cfgs/$c->{name} core-dependencies > /dev/null")) {
+                        $changes = qx($MAKE -s O=../cfgs/$c->{name} core-dependencies 2>&1);
+                        $changereport .= $changes;
+                        print $changes;
+                        writeLine "cfgs/$c->{name}/inhibit", "$changes";
+                        $c->{inhibit} = 1;
+                };
+            }
         }
         pr "Update packets modification times (take 5min)";
         updateCTimes $pkgs;
