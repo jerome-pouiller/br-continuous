@@ -20,7 +20,8 @@ $(document).ready(function() {
         "bLengthChange": false,
         "bSortClass": false,
         "bInfo": false,
-        "bAutoWidth": false
+        "bAutoWidth": false,
+        "aoColumnDefs": [ { "sType": "html", "aTargets": [ "_all" ] } ]
     } );
     new FixedHeader(table);
 } );
