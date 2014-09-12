@@ -288,10 +288,10 @@ sub updateForce($) {
     for my $p (values %{$pkgs}) {
         for my $j (values %{$p->{cfgs}}) {
             my $dir = "context/$j->{cfg}{name}/$j->{pkg}{name}";
-            if (-e $dir && defined $j->{last_build}) {
+            if (-e $dir) {
                 my $newvalue = (-e "$dir/force-rebuild") ? 1 : 0;
-                if ($j->{last_build}{forcerebuilt} != $newvalue) {
-                    $j->{last_build}{forcerebuilt} = $newvalue;
+                if ($j->{forcerebuilt} != $newvalue) {
+                    $j->{forcerebuilt} = $newvalue;
                     $ret = 1;
                 }
             }
@@ -315,7 +315,7 @@ sub updateStatus($) {
                 $j->{last_build}{gitid}    = firstLine "$dir/gitid";
                 $j->{last_build}{result}   = firstLine "$dir/result";
                 $j->{last_build}{outdirid} = firstLine "$dir/outdirid";
-                $j->{last_build}{forcerebuilt} = ((-e "$dir/force-rebuild") ? 1 : 0);
+                $j->{forcerebuilt} = ((-e "$dir/force-rebuild") ? 1 : 0);
                 $j->{last_build}{details}  = firstLine "$dir/details";
             }
         }
@@ -561,7 +561,7 @@ sub build($$$) {
     $j->{last_build}{result}   = "Cur";
     $j->{last_build}{details}  = undef;
     $j->{last_build}{outdirid} = firstLine "cfgs/$cname/dirid";
-    $j->{last_build}{forcerebuilt} = 0;
+    $j->{forcerebuilt}         = 0;
 
     mkdir "results/$new_id";
     symlink "../$old_id", "results/$new_id/previous_build" if $old_id;
