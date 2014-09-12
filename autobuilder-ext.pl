@@ -2,7 +2,7 @@
 # kate: space-indent on; indent-width 4; mixedindent off; indent-mode cstyle; 
 
 my $MAKE = "make -C buildroot";
-my $URL = "http://sysmic.org/~jezz/br-continuous";
+my $URL = "http://sysmic.org/~jezz/autobuilder";
 # Three main data:
 #   %cfgs iterator: $c
 #   %pkgs iterator: $p $dep $depdep
@@ -595,7 +595,7 @@ sub build($$$) {
     $j->{last_build}{result}   = firstLine "results/$new_id/result";
     $j->{last_build}{details}  = firstLine "results/$new_id/details";
     if ($j->{last_build}{result} ne $prev_build{result}) {
-        my $explanation = "$j->{pkg}{name}/$j->{cfg}{name} [$URL/html/$j->{pkg}{name}.html#$j->{cfg}{name}]: $prev_build{result}";
+        my $explanation = "$j->{pkg}{name}/$j->{cfg}{name} [$URL/$j->{pkg}{name}.html#$j->{cfg}{name}]: $prev_build{result}";
         $explanation .=  " ($prev_build{details})" if ($prev_build{result} eq "Dep");
         #$explanation .=  " [$URL/results/$prev_build{id}]" if ($prev_build{result} ne "Wait");
         $explanation .=  " -> $j->{last_build}{result}";
