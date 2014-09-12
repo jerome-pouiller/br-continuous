@@ -39,6 +39,8 @@ use POSIX qw(strftime);
 use Cwd qw(realpath);
 use MIME::Lite;
 use Template;
+use List::MoreUtils qw(uniq);
+
 my $tpl = Template->new({ POST_CHOMP => 1, ENCODING => 'utf8' });
 my $report = "";
 my $reporttime = time;
@@ -100,6 +102,8 @@ sub getPkgList() {
      next if ($filepattern !~ m|(.*)/\1.mk$|);
      $file =~ m|(.*)/\1.mk$|;
      my $name = $1;
+     # Blacklist building of linux-headers since it break scsi/sg.h
+     next if ($name eq "linux-headers");
      my $FILE;
      open $FILE, $file;
      while (<$FILE>) {
